@@ -1,35 +1,29 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
-# === 1. 软件界面全局设置 ===
-st.set_page_config(page_title="南村团队 AI 商业视觉助手", layout="centered")
+# --- 1. 软件界面设置 ---
+st.set_page_config(page_title="南村团队 AI 商业生图", layout="centered")
 st.title("🎨 南村专属 AI 商业生图工作台 (公网版)")
 
-# === 2. 侧边栏：电商参数配置 ===
+# --- 2. 侧边栏配置 ---
 st.sidebar.header("🔑 核心配置")
 api_key = st.sidebar.text_input("在此输入您的 Google API Key", type="password")
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("📐 输出规格")
 size_map = {
     "1:1 (亚马逊主图/白底图)": "1:1",
-    "9:16 (TikTok 视频封面/短视频)": "9:16",
+    "9:16 (TikTok 视频/封面)": "9:16",
     "16:9 (横版品牌海报)": "16:9"
 }
 selected_size_label = st.sidebar.selectbox("选择图片尺寸比例", list(size_map.keys()))
 aspect_ratio = size_map[selected_size_label]
 
-st.sidebar.info("💡 提示：部署在云端无需配置代理，速度极快。")
-
-# === 3. 主操作区：Prompt 输入 ===
+# --- 3. 画面描述 ---
 st.markdown("### 📝 视觉画面描述")
-prompt = st.text_area(
-    "请输入您的设计提示词：", 
-    height=150,
-    placeholder="例如：一款极简风格的蝴蝶结耳环，放置在柔和光线的丝绒首饰盒中，4k 高画质商业摄影..."
-)
+prompt = st.text_area("请输入设计提示词：", height=150, placeholder="例如：蝴蝶结耳环，极简风格，商业摄影...")
 
-# === 4. 核心生成逻辑 ===
+# --- 4. 渲染逻辑 ---
 if st.button("🚀 开始渲染商业大片", use_container_width=True):
     if not api_key:
         st.error("⚠️ 请先在左侧填入 API Key！")
@@ -38,28 +32,27 @@ if st.button("🚀 开始渲染商业大片", use_container_width=True):
     else:
         with st.spinner("云端模型正在全速渲染中..."):
             try:
-                # 在云端部署，直接配置即可，无需 transport='rest' 也能跑通
-                genai.configure(api_key=api_key)
+                # 使用最新版 Google GenAI 客户端
+                client = genai.Client(api_key=api_key)
                 
-                # 融合电商营销参数
-                final_prompt = f"{prompt}, aspect ratio: {aspect_ratio}, professional product photography, high definition"
+                # 融合高品质商业摄影指令
+                final_prompt = f"{prompt}, professional product photography, high definition, sharp focus"
                 
-                # 调用 Gemini 生图模型
-                model = genai.GenerativeModel('gemini-3-flash-image')
-                response = model.generate_content(final_prompt)
+                # 调用公网 Imagen 模型
+                response = client.models.generate_images(
+                    model='imagen-3.0-generate-001',
+                    prompt=final_prompt,
+                    config=types.GenerateImagesConfig(
+                        number_of_images=1,
+                        aspect_ratio=aspect_ratio,
+                    )
+                )
                 
-                # 检查并展示渲染结果
-                image_found = False
-                for part in response.parts:
-                    if hasattr(part, 'inline_data'):
-                        st.success("✅ 商业视觉渲染完成！")
-                        st.image(part.inline_data.data, caption="南村团队专属 AI 生成结果", use_container_width=True)
-                        image_found = True
-                
-                if not image_found:
-                    st.warning("⚠️ 生成未包含图片。可能触发了安全拦截（如人像审核）。")
-                    if response.text:
-                        st.info(f"模型反馈信息：{response.text}")
-                    
+                if response.generated_images:
+                    st.success("✅ 渲染完成！")
+                    img_bytes = response.generated_images[0].image.image_bytes
+                    st.image(img_bytes, caption="南村团队专属生成结果", use_container_width=True)
+                else:
+                    st.warning("⚠️ 渲染成功但未返回图片，可能是提示词触发了安全拦截。")
             except Exception as e:
-                st.error(f"❌ 渲染失败，错误详情：{e}")
+                st.error(f"❌ 渲染失败，请检查 API Key 或网络环境。详情：{e}")
