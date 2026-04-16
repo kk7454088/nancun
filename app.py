@@ -32,13 +32,13 @@ if st.button("🚀 开始渲染商业大片", use_container_width=True):
     else:
         with st.spinner("云端模型正在全速渲染中..."):
             try:
-                # 使用最新版 Google GenAI 客户端
-                client = genai.Client(api_key=api_key)
+                # 核心修复点：初始化客户端时强制指定 v1 版本
+                client = genai.Client(api_key=api_key, http_options={'api_version': 'v1'})
                 
                 # 融合高品质商业摄影指令
                 final_prompt = f"{prompt}, professional product photography, high definition, sharp focus"
                 
-                # 调用公网 Imagen 模型
+                # 调用模型
                 response = client.models.generate_images(
                     model='imagen-3.0-generate-001',
                     prompt=final_prompt,
@@ -55,4 +55,6 @@ if st.button("🚀 开始渲染商业大片", use_container_width=True):
                 else:
                     st.warning("⚠️ 渲染成功但未返回图片，可能是提示词触发了安全拦截。")
             except Exception as e:
-                st.error(f"❌ 渲染失败，请检查 API Key 或网络环境。详情：{e}")
+                # 如果 404 依然存在，尝试后备模型代号
+                st.error(f"❌ 渲染失败。如果报错 404，可能是您的 API Key 尚未获得 Imagen 3 权限。")
+                st.info(f"详细错误详情：{e}")
