@@ -37,7 +37,7 @@ if st.button("🚀 开始渲染商业大片", use_container_width=True):
             final_prompt = f"{prompt}, professional product photography, high definition, sharp focus, aspect ratio: {aspect_ratio}"
             
             # 【核心修复】：使用个人开发者 Key 专属的 Gemini 3.1 Flash Image Preview 接口
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key={api_key}"
+url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key={api_key}"
             
             # 【核心修复】：使用标准的 Gemini 请求包格式
             payload = {
